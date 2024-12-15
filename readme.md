@@ -22,7 +22,7 @@ Inpired on HP-UX Versioning System:
 - 4b v4.5 R532
 - 2z v2.1 R1f4
 
-# BrazuxFS - Brazux File System
+# BrFS - Brazilian File System
 
 Simplified File System with partial POSIX Support.
 
