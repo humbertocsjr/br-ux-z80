@@ -1,3 +1,5 @@
 build/conf.mk
 include/osver.*
 bin/*
+distro/*.img
+output/*
