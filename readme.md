@@ -26,6 +26,71 @@ Inpired on HP-UX Versioning System:
 
 Simplified File System with partial POSIX Support.
 
+Block ID is the block position in disk.
+
+The first 6 blocks of the disk are not indexed, and are reserved for the Boot Loader, with Root positioned in block ID 6.
+
+
+# Date Time Format
+
+| Size | Description |
+|------|-------------|
+|    2 | Year        |
+|    1 | Month       |
+|    1 | Day         |
+|    1 | Hour        |
+|    1 | Minute      |
+|    1 | Second      |
+|    1 | Centisecond |
+
+# Item Block Format
+
+| Size | Description            |
+|------|------------------------|
+|   64 | Item Name              |
+|    2 | User ID                |
+|    2 | Group ID               |
+|    2 | Creation User ID       |
+|    8 | Creation Date Time     |
+|    8 | Modification Date Time |
+|  412 | Reserved               |
+|    2 | Block ID               |
+|    2 | Mode                   |
+|    2 | Last Disk Block ID     |
+|    2 | First Child ID         |
+|    2 | Zero                   |
+|    2 | Total Disk Blocks      |
+
+# Root Block Format
+
+| Size | Description            |
+|------|------------------------|
+|   64 | Item Name              |
+|    2 | User ID                |
+|    2 | Group ID               |
+|    2 | Creation User ID       |
+|    8 | Creation Date Time     |
+|    8 | Modification Date Time |
+|  412 | Reserved               |
+|    2 | Block ID               |
+|    2 | Mode                   |
+|    2 | Last Disk Block ID     |
+|    2 | First Child ID         |
+|    2 | Zero                   |
+|    2 | Total Disk Blocks      |
+
+# Data Block Format
+
+| Size | Description       |
+|------|-------------------|
+|  500 | Raw Data          |
+|    2 | Block ID          |
+|    2 | Mode              |
+|    2 | Next ID           |
+|    2 | First Child ID    |
+|    2 | Parent ID         |
+|    2 | Data Size         |
+
 # Target | MSX 1
 
 This version aims to support the base model of the MSX 1.
