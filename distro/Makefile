@@ -8,7 +8,7 @@ all: $(IMG)
 clean:
 	@rm -f $(IMG) >> /dev/null
 
-720.img: ../bin/genfs $(wildcard ../output/*) Makefile
+720.img: $(wildcard ../output/*) Makefile
 	@$(ECHOIMG)
 	@dd if=/dev/zero of=$@ bs=1024 count=$(patsubst %.img,%,$@) status=none
-	@../bin/genfs -i $@ -s $(patsubst %.img,%,$@) -b ../output/floppy.boot -a ../output/floppy.boot /boot/boot
+	@$(GENFS) $@ ../output/floppy.boot $(patsubst %.img,%,$@) ../output/floppy.boot /boot/bootsect

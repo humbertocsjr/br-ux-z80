@@ -30,6 +30,11 @@ Block ID is the block position in disk.
 
 The first 6 blocks of the disk are not indexed, and are reserved for the Boot Loader, with Root positioned in block ID 6.
 
+# Modes
+
+Directory Mode    = 0x41ff
+Regular File Mode = 0x81ff
+Data Block Mode   = 0x0000
 
 # Date Time Format
 
@@ -48,6 +53,7 @@ The first 6 blocks of the disk are not indexed, and are reserved for the Boot Lo
 | Size | Description            |
 |------|------------------------|
 |   64 | Item Name              |
+|    2 | Always Zero            |
 |    2 | User ID                |
 |    2 | Group ID               |
 |    2 | Creation User ID       |
@@ -56,16 +62,17 @@ The first 6 blocks of the disk are not indexed, and are reserved for the Boot Lo
 |  412 | Reserved               |
 |    2 | Block ID               |
 |    2 | Mode                   |
-|    2 | Last Disk Block ID     |
+|    2 | Next ID                |
 |    2 | First Child ID         |
-|    2 | Zero                   |
-|    2 | Total Disk Blocks      |
+|    2 | Parent ID              |
+|    2 | Data Size              |
 
 # Root Block Format
 
 | Size | Description            |
 |------|------------------------|
 |   64 | Item Name              |
+|    2 | Always Zero            |
 |    2 | User ID                |
 |    2 | Group ID               |
 |    2 | Creation User ID       |
