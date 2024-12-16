@@ -39,11 +39,11 @@ BLOCK_SIZE: equ 510
     ; Try slot id 1
     ld a, 1
     call megaram_detect
-    jr c, .continue
+    jp c, .continue
     ; Try slot id 2
     ld a, 2
     call megaram_detect
-    jr nc, .fail
+    jp nc, .fail
     .continue:
     ; Reset MegaRAM page
     ld a, 0
@@ -51,6 +51,12 @@ BLOCK_SIZE: equ 510
     call megaram_set_page
     ld a, 1
     ld h, 0x40
+    call megaram_set_page
+    ld a, 2
+    ld h, 0x60
+    call megaram_set_page
+    ld a, 3
+    ld h, 0x80
     call megaram_set_page
     ; Mount BRUXFS
     call print
@@ -67,13 +73,76 @@ BLOCK_SIZE: equ 510
     ; Load first child
     call diska_read
     jp nc, .fail
-
+    ; Find kernel
+    .find:
+        ld hl, KERNEL_DATA
+        ld de, kernel_name
+        call streq
+        jp z, .found
+        ld de, (KERNEL_DATA+BLOCK_NEXT)
+        ld a, e
+        or d
+        jp z, .fail
+        call diska_read
+        jp nc, .fail
+        jr .find
+    .found:
+    ; Check if kernel has chilren
+    ld de, (KERNEL_DATA+BLOCK_CHILD)
+    ld a, e
+    or d
+    jp z, .fail
+    ; Load first child
+    call diska_read
+    jp nc, .fail
+    ld de, 0x4000
+    .loop:
+        ld hl, KERNEL_DATA
+        ld bc, 500
+        ldir
+        ld hl, (KERNEL_DATA+BLOCK_NEXT)
+        ld a, l
+        or h
+        jp z, .done
+        push de
+        ld de, (KERNEL_DATA+BLOCK_NEXT)
+        call diska_read
+        pop de
+        jp nc, .fail
+        jp .loop
+    .done:
+    call print
+    db " [DONE]",13,10,0
 
     jp $
     .fail:
         call print
         db " [FAIL]",0
         jp $
+
+; hl = str1
+; de = str2
+streq:
+    push hl
+    push de
+    push bc
+    ld b, a
+    .loop:
+        ld a, (de)
+        cp (hl)
+        jr nz, .end
+        cp 0
+        jr z, .end
+        inc hl
+        inc de
+        jr .loop
+    .end:
+    ld a, b
+    pop bc
+    pop de
+    pop hl
+    ret
+
 
 ; de = block
 ; ret a = sectors read
@@ -187,3 +256,6 @@ print:
     ret
 
 include "../include/osver.s"
+
+kernel_name:
+    db "brux",0
