@@ -4,6 +4,7 @@ all clean: build/conf.mk bin include output
 	@$(MAKE) pre_$@
 	@$(MAKE) -C tools $@
 	@$(MAKE) -C boot $@
+	@$(MAKE) -C kernel $@
 	@$(MAKE) -C distro $@
 	@$(MAKE) post_$@
 
@@ -32,8 +33,8 @@ run_sharp: all
 	@openmsx -machine Sharp_HB-8000_1.1 -ext megaram -ext DDX_3.0 -diska distro/720.img
 
 run_expert: all
-	@$(ECHORUN) Gradiente Expert GPC-1 with Microsol CDX-2 FDC
-	@openmsx -machine Gradiente_Expert_GPC-1 -ext megaram -ext Microsol_CDX-2 -diska distro/720.img
+	@$(ECHORUN) Gradiente Expert XP-800 with Microsol CDX-2 FDC
+	@openmsx -machine Gradiente_Expert_XP-800 -ext megaram -ext Microsol_CDX-2 -diska distro/720.img
 
 run_ddplus: all
 	@$(ECHORUN) Gradiente Expert DD Plus
@@ -42,3 +43,8 @@ run_ddplus: all
 run_minimal: all
 	@$(ECHORUN) Mitsubishi ML-F110 with Mitsubishi ML-30FD
 	@openmsx -machine Mitsubishi_ML-F110 -ext megaram -ext Mitsubishi_ML-30DC_ML-30FD -diska distro/720.img
+
+run_serial: all
+	@$(ECHORUN) Mitsubishi ML-F110 with Mitsubishi ML-30FD and RS-232
+	@openmsx -machine Mitsubishi_ML-F110 -ext megaram -ext slotexpander -ext rs232 -ext Mitsubishi_ML-30DC_ML-30FD -diska distro/720.img
+

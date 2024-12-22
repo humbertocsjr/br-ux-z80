@@ -14,13 +14,13 @@ Inpired on HP-UX Versioning System:
     - b: Beta
     - z: Production
 - Sub version: 1 Digit Number
-- Revision: 2 Hex Digits Number
+- Revision: 2 Digits Number
 
 **Examples.:**
 
 - 1a v1.1 R100
 - 4b v4.5 R532
-- 2z v2.1 R1f4
+- 2z v2.1 R154
 
 # BrFS - Brazilian File System
 

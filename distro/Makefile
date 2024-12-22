@@ -11,4 +11,4 @@ clean:
 720.img: $(wildcard ../output/*) Makefile
 	@$(ECHOIMG)
 	@dd if=/dev/zero of=$@ bs=1024 count=$(patsubst %.img,%,$@) status=none
-	@$(GENFS) $@ ../output/floppy.boot $(patsubst %.img,%,$@) ../output/floppy.boot /boot/bootsect
+	@$(GENFS) $@ ../output/floppy.boot $(patsubst %.img,%,$@) ../output/floppy.boot /boot/bootsect ../output/br-ux /br-ux
