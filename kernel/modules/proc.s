@@ -8,6 +8,10 @@ obj_proc: equ 16
     .stack_top: equ 8
     .parent_id: equ 12
     .next_ptr: equ 14
+    .page_4000: equ 16
+    .page_6000: equ 17
+    .page_8000: equ 18
+    .page_a000: equ 19
 qty_proc: equ 64
 
 PROC_EMPTY: equ 0
@@ -66,10 +70,10 @@ proc_hkeyi:
 ; de
 ; bc
 ; af
-; hl
-; de
-; bc
-; af
+; hl`
+; de`
+; bc`
+; af`
 ; iy
 ; ix
 ; RET FROM CALL H.KEYI
@@ -80,12 +84,28 @@ proc_switch:
     add hl, sp
     ld (ix+obj_proc.stack_top), l
     ld (ix+obj_proc.stack_top+1), h
+    ld a, (_memmgr_curr_4000)
+    ld (ix+obj_proc.page_4000), a
+    ld a, (_memmgr_curr_6000)
+    ld (ix+obj_proc.page_6000), a
+    ld a, (_memmgr_curr_8000)
+    ld (ix+obj_proc.page_8000), a
+    ld a, (_memmgr_curr_a000)
+    ld (ix+obj_proc.page_a000), a
     ld e, (ix+obj_proc.next_ptr)
     ld d, (ix+obj_proc.next_ptr+1)
     ld ix, 0
     add ix, de
     ld l, (ix+obj_proc.stack_top)
     ld h, (ix+obj_proc.stack_top+1)
+    ld a, (ix+obj_proc.page_4000)
+    call memmgr_set_page_4000
+    ld a, (ix+obj_proc.page_6000)
+    call memmgr_set_page_6000
+    ld a, (ix+obj_proc.page_8000)
+    call memmgr_set_page_8000
+    ld a, (ix+obj_proc.page_a000)
+    call memmgr_set_page_a000
     ld sp, hl
     .hkeyi:
     ret
