@@ -1,12 +1,9 @@
-obj_inode: equ 16
+obj_inode: equ 10
     .id: equ 0
     .process_id: equ 2
-    .read_handler: equ 4
-    .write_handler: equ 6
-    .seek_handler: equ 8
-    .close_handler: equ 10
-    .position: equ 12
-    .sub_position: equ 14
+    .device_id: equ 4
+    .position: equ 6
+    .sub_position: equ 8
 qty_inode: equ 64
 
 obj_dirent: equ 68

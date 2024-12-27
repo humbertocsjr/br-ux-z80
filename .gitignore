@@ -3,3 +3,4 @@ include/osver.*
 bin/*
 distro/*.img
 output/*
+**/__pycache__/*

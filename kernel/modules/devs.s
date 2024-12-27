@@ -1,0 +1,12 @@
+obj_dev: equ 32
+    .id: equ 0
+    .block_size: equ 2
+    .process: equ 4
+    .read_handler: equ 6
+    .write_handler: equ 8
+    .open_handler: equ 10
+    .close_handler: equ 12
+    .seek_handler: equ 14
+    .ioctl_handler: equ 16
+    .name: equ 18
+    .zero: equ 30
