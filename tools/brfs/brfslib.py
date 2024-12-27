@@ -69,7 +69,6 @@ class BRFS:
     def write_item_block(self, item_block : ItemBlock):
         creation_date_time = item_block.creation_date_time
         modification_date_time = item_block.modification_date_time
-        print(item_block.block_id, item_block.next_id)
         content = struct.pack("<64s5H6BH6B412s6H", 
                             item_block.item_name.encode('utf-8'),
                             item_block.always_zero,
@@ -103,7 +102,6 @@ class BRFS:
         self.image_file.write(content)
     
     def write_data_block(self, data_block: DataBlock):
-        print(data_block.block_id, data_block.next_id)
         content = struct.pack("<500s6H", 
                             data_block.raw_data,
                             data_block.block_id,
@@ -150,7 +148,6 @@ class BRFS:
             alloc_id = deleted_block.block_id
             eod.next_id = deleted_block.next_id
         self.write_item_block(eod)
-        print("ALLOC", alloc_id, eod.block_id)
         return alloc_id
     
     def free_block(self, block : DataBlock|ItemBlock):
