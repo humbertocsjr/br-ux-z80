@@ -7,6 +7,9 @@ BLOCK_SIZE = 512
 DIRECTORY_MODE    = stat.S_IFDIR|stat.S_IRUSR|stat.S_IWUSR|stat.S_IRGRP|stat.S_IWGRP|stat.S_IROTH|stat.S_IWOTH
 REGULAR_FILE_MODE = stat.S_IFREG|stat.S_IRUSR|stat.S_IWUSR|stat.S_IRGRP|stat.S_IWGRP|stat.S_IROTH|stat.S_IWOTH
 DATA_BLOCK_MODE   = 0x0000
+CHAR_DEV_MODE     = stat.S_IFCHR|stat.S_IRUSR|stat.S_IWUSR|stat.S_IRGRP|stat.S_IWGRP|stat.S_IROTH|stat.S_IWOTH
+BLOCK_DEV_MODE    = stat.S_IFBLK|stat.S_IRUSR|stat.S_IWUSR|stat.S_IRGRP|stat.S_IWGRP|stat.S_IROTH|stat.S_IWOTH
+MODE_MASK = 0o777
 
 class DateTime:
     def __init__(self, year: int, month: int, day: int, hour: int, minute: int, second: int, centisecond: int):
@@ -64,7 +67,13 @@ class BRFS:
         self.image_file.write(data)
 
         bootloader_file.close()
-        
+    
+    def write_root(self, disk_size):
+        cur_datetime = DateTime.get_cur_datetime()
+        root = ItemBlock("", 0, 0, 0, 0, cur_datetime, cur_datetime, "", 6, DIRECTORY_MODE, 7, 0, 0, 2*disk_size)
+        self.write_item_block(root)
+        eod  = DataBlock("".encode(), 7, DATA_BLOCK_MODE, 0, 0, 0, 0)
+        self.write_data_block(eod)
 
     def write_item_block(self, item_block : ItemBlock):
         creation_date_time = item_block.creation_date_time
@@ -101,6 +110,13 @@ class BRFS:
         self.image_file.seek(item_block.block_id*BLOCK_SIZE)
         self.image_file.write(content)
     
+    def read_item_block(self, block_id):
+        self.image_file.seek(block_id*BLOCK_SIZE)
+        content = self.image_file.read(BLOCK_SIZE)
+        data = struct.unpack("<64s5H6BH6B412s6H", content)
+        return ItemBlock(data[0].decode("utf-8"), data[1], data[2], data[3], data[4], DateTime(data[5], data[6], data[7], data[8], data[9], data[10], data[11]), DateTime(data[12], data[13], data[14], data[15], data[16], data[17], data[18]), data[19].decode("utf-8"), data[20], data[21], data[22], data[23], data[24], data[25])
+
+
     def write_data_block(self, data_block: DataBlock):
         content = struct.pack("<500s6H", 
                             data_block.raw_data,
@@ -115,20 +131,6 @@ class BRFS:
         self.image_file.seek(data_block.block_id*BLOCK_SIZE)
         self.image_file.write(content)
     
-    def write_root(self, disk_size):
-        cur_datetime = DateTime.get_cur_datetime()
-        root = ItemBlock("", 0, 0, 0, 0, cur_datetime, cur_datetime, "", 6, DIRECTORY_MODE, 7, 0, 0, 2*disk_size)
-        self.write_item_block(root)
-        eod  = DataBlock("".encode(), 7, DATA_BLOCK_MODE, 0, 0, 0, 0)
-        self.write_data_block(eod)
-
-    
-    def read_item_block(self, block_id):
-        self.image_file.seek(block_id*BLOCK_SIZE)
-        content = self.image_file.read(BLOCK_SIZE)
-        data = struct.unpack("<64s5H6BH6B412s6H", content)
-        return ItemBlock(data[0].decode("utf-8"), data[1], data[2], data[3], data[4], DateTime(data[5], data[6], data[7], data[8], data[9], data[10], data[11]), DateTime(data[12], data[13], data[14], data[15], data[16], data[17], data[18]), data[19].decode("utf-8"), data[20], data[21], data[22], data[23], data[24], data[25])
-
     def read_data_block(self, block_id):
         self.image_file.seek(block_id*BLOCK_SIZE)
         content = self.image_file.read(BLOCK_SIZE)
@@ -151,13 +153,22 @@ class BRFS:
         return alloc_id
     
     def free_block(self, block : DataBlock|ItemBlock):
+        self.free_child_block(block, False)
+
+    def free_child_block(self, block : DataBlock|ItemBlock, free_next_block = True):
+        if(block.first_child_id):
+            child_block = self.read_item_block(block.first_child_id)
+            self.free_child_block(child_block)
+        if(block.next_id and free_next_block):
+            next_block = self.read_item_block(block.next_id)
+            self.free_child_block(next_block)
         root = self.read_item_block(6)
         eod  = self.read_item_block(root.next_id)
         deleted_block = DataBlock("".encode(), block.block_id, DATA_BLOCK_MODE, eod.next_id, 0, 0, 0)
         eod.next_id = deleted_block.block_id
         self.write_item_block(eod)
         self.write_data_block(deleted_block)
-
+    
     def import_file(self, source, destination):
         directories = destination.split('/')
         cur_dir = self.read_item_block(6)
@@ -220,6 +231,183 @@ class BRFS:
             prev_id = id
         
         source_file.close()
+    
+    def export_file(self, source, destination):
+        directories = source.split('/')
+        cur_dir = self.read_item_block(6)
         
+        #Searching for file
+        for i in range(1, len(directories)):
+            if(cur_dir.first_child_id == 0):
+                return False
+            else:
+                cur_item = self.read_item_block(cur_dir.first_child_id)
+                found = False
+                while True:
+                    if(cur_item.item_name == directories[i]):
+                        found = True
+                        break
+                    if(cur_item.next_id == 0):
+                        break
+                    cur_item = self.read_item_block(cur_item.next_id)
+                if(not found):
+                    return False
+                cur_dir = cur_item
+        
+        destination_file = open(destination, 'rb')
+        
+        data = self.read_data_block(cur_item.first_child_id)
+        while True:
+            raw_data = data.raw_data[:data.data_size]
+            destination_file.write(raw_data)
+
+            if(data.next_id == 0):
+                break
+
+            data = self.read_data_block(data.next_id)
+
+        destination_file.close()
+        return True
+    
+    def make_dir(self, path):
+        directories = path.split('/')
+        cur_dir = self.read_item_block(6)
+        
+        #Checking if directories exists, and creates it if it doesn't
+        for i in range(1, len(directories)):
+            if(cur_dir.first_child_id == 0):
+                id = self.alloc_block()
+                cur_datetime = DateTime.get_cur_datetime()
+                self.write_item_block(ItemBlock(directories[i], 0, 0, 0, 0, cur_datetime, cur_datetime, "", id, DIRECTORY_MODE, 0, 0, cur_dir.block_id, 0))
+                cur_dir = self.read_item_block(cur_dir.block_id)
+                cur_dir.first_child_id = id
+                self.write_item_block(cur_dir)
+                cur_dir = self.read_item_block(id)
+            else:
+                cur_item = self.read_item_block(cur_dir.first_child_id)
+                found = False
+                while True:
+                    if(cur_item.item_name == directories[i]):
+                        found = True
+                        break
+                    if(cur_item.next_id == 0):
+                        break
+                    cur_item = self.read_item_block(cur_item.next_id)
+                if(not found):
+                    id = self.alloc_block()
+                    cur_datetime = DateTime.get_cur_datetime()
+                    self.write_item_block(ItemBlock(directories[i], 0, 0, 0, 0, cur_datetime, cur_datetime, "", id, DIRECTORY_MODE, 0, 0, cur_dir.block_id, 0))
+                    cur_item = self.read_item_block(cur_item.block_id)
+                    cur_item.next_id = id
+                    self.write_item_block(cur_item)
+                    cur_item = self.read_item_block(id)
+                cur_dir = cur_item
+        return True
+    
+    def delete_item(self, path):
+        directories = path.split('/')
+        cur_dir = self.read_item_block(6)
+        prev_item = None
+        
+        #Searching for file
+        for i in range(1, len(directories)):
+            if(cur_dir.first_child_id == 0):
+                return False
+            else:
+                cur_item = self.read_item_block(cur_dir.first_child_id)
+                found = False
+                while True:
+                    if(cur_item.item_name == directories[i]):
+                        found = True
+                        break
+                    if(cur_item.next_id == 0):
+                        break
+                    prev_item = cur_item
+                    cur_item = self.read_item_block(cur_item.next_id)
+                if(not found):
+                    return False
+                cur_dir = cur_item
+        
+        parent_block = self.read_item_block(cur_item.parent_id)
+        if(parent_block.first_child_id == cur_item.block_id):
+            parent_block.first_child_id = cur_item.next_id
+            self.write_item_block(parent_block)
+        else:
+            prev_item.block_id = cur_item.next_id
+            self.write_item_block(prev_item)
+        self.free_block(cur_item)
+        
+        return True
+        
+    def change_mode(self, path, mode):
+        directories = path.split('/')
+        cur_dir = self.read_item_block(6)
+        mode = mode & MODE_MASK
+        
+        #Searching for item
+        for i in range(1, len(directories)):
+            if(cur_dir.first_child_id == 0):
+                return False
+            else:
+                cur_item = self.read_item_block(cur_dir.first_child_id)
+                found = False
+                while True:
+                    if(cur_item.item_name == directories[i]):
+                        found = True
+                        break
+                    if(cur_item.next_id == 0):
+                        break
+                    cur_item = self.read_item_block(cur_item.next_id)
+                if(not found):
+                    return False
+                cur_dir = cur_item
+
+        cur_item.mode = (cur_item.mode & ~MODE_MASK) | mode
+        self.write_item_block(cur_item)
+        return True
+
+    def make_device(self, path, is_char_device):
+        directories = path.split('/')
+        cur_dir = self.read_item_block(6)
+        
+        #Checking if directories exists, and creates it if it doesn't
+        for i in range(1, len(directories)-1):
+            if(cur_dir.first_child_id == 0):
+                id = self.alloc_block()
+                cur_datetime = DateTime.get_cur_datetime()
+                self.write_item_block(ItemBlock(directories[i], 0, 0, 0, 0, cur_datetime, cur_datetime, "", id, DIRECTORY_MODE, 0, 0, cur_dir.block_id, 0))
+                cur_dir = self.read_item_block(cur_dir.block_id)
+                cur_dir.first_child_id = id
+                self.write_item_block(cur_dir)
+                cur_dir = self.read_item_block(id)
+            else:
+                cur_item = self.read_item_block(cur_dir.first_child_id)
+                found = False
+                while True:
+                    if(cur_item.item_name == directories[i]):
+                        found = True
+                        break
+                    if(cur_item.next_id == 0):
+                        break
+                    cur_item = self.read_item_block(cur_item.next_id)
+                if(not found):
+                    id = self.alloc_block()
+                    cur_datetime = DateTime.get_cur_datetime()
+                    self.write_item_block(ItemBlock(directories[i], 0, 0, 0, 0, cur_datetime, cur_datetime, "", id, DIRECTORY_MODE, 0, 0, cur_dir.block_id, 0))
+                    cur_item = self.read_item_block(cur_item.block_id)
+                    cur_item.next_id = id
+                    self.write_item_block(cur_item)
+                    cur_item = self.read_item_block(id)
+                cur_dir = cur_item
+        
+        id = self.alloc_block()
+        cur_dir = self.read_item_block(cur_dir.block_id)
+        cur_dir.first_child_id = id
+
+        self.write_item_block(cur_dir)
+        cur_datetime = DateTime.get_cur_datetime()
+        cur_file = ItemBlock(directories[-1], 0, 0, 0, 0, cur_datetime, cur_datetime, "", id, (CHAR_DEV_MODE if is_char_device else BLOCK_DEV_MODE), 0, 0, cur_dir.block_id, 0)
+        self.write_item_block(cur_file)
+       
     def __del__(self):
         self.image_file.close()
