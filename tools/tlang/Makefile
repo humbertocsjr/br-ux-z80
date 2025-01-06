@@ -1,6 +1,6 @@
 include ../../build/conf.mk
 
-BIN = ../../bin/hccpp
+BIN = ../../bin/tlang
 
 all: $(BIN)
 	@echo >> /dev/null
@@ -10,8 +10,8 @@ clean:
 
 ../../bin/%: %.c
 	@$(ECHOCC)
-	@$(CC) $(CCFLAGS) -o $@ $^
+	@$(CC) $(CCFLAGS) -g -o $@ $^
 	@chmod +x $@
 
 test: all
-	../../bin/hccpp test.c
+	../../bin/tlang test.t test.tok
